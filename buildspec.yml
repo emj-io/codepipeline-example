@@ -1,0 +1,28 @@
+version: 0.2
+phases:
+ install:
+    commands:
+      - echo Logging in to Amazon ECR...
+      - aws --version
+      - ACCOUNT_ID=152240322374
+      - REGION=us-west-2
+      - DEPLOYMENT_ROLE="arn:aws:iam::${ACCOUNT_ID}:role/hc-ecr-publish-${REGION}" "hc-ecr-publish-${REGION}-$(date +%Y%m%d-%H%M%S)"
+      - SESSION_NAME="THISISASESSIONNAME-$(date +%Y%m%d-%H%M%S)"
+      - temp_role=$(aws sts assume-role --role-arn "$DEPLOYMENT_ROLE" --role-session-name "$SESSION_NAME" --duration-seconds 900)
+      - export AWS_ACCESS_KEY_ID=$(echo "$temp_role" | jq .Credentials.AccessKeyId | xargs)
+      - export AWS_SECRET_ACCESS_KEY=$(echo $temp_role | jq .Credentials.SecretAccessKey | xargs)
+      - export AWS_SESSION_TOKEN=$(echo $temp_role | jq .Credentials.SessionToken | xargs)
+      - export AWS_SECURITY_TOKEN=$AWS_SESSION_TOKEN
+      - $(aws ecr get-login --region $AWS_DEFAULT_REGION --no-include-email)
+      - COMMIT_HASH=$(echo $CODEBUILD_RESOLVED_SOURCE_VERSION | cut -c 1-7)
+      - IMAGE_TAG=${COMMIT_HASH:=latest}
+ pre_build:
+   commands:
+     - echo "pre_build step"
+     - env
+ build:
+   commands:
+     - echo "build step"
+ post_build:
+   commands:
+     - echo "post_build step"
